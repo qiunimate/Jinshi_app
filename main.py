@@ -56,10 +56,30 @@ class MenuItemButton(BoxLayout):
         self.order_manager = order_manager
         self.update_callback = update_callback
 
-        # Details (name, price, quantity controls)
-        self.details = BoxLayout(orientation='vertical')
-        self.name_label = Button(text=self.name, size_hint_y=0.5, background_color=(1, 1, 1, 0), font_name='Roboto', bold=True)
-        self.price_label = Button(text=f'€{self.price}', size_hint_y=0.5, background_color=(1, 1, 1, 0), font_name='Roboto', bold=True)
+        # Details (name and price on the same line)
+        self.details = BoxLayout(orientation='horizontal')
+
+        # Set a fixed width for the name label, so all prices align
+        self.name_label = Button(
+            text=self.name, 
+            size_hint_x=0.8,  # Adjust this to control the width of the name label
+            background_color=(1, 1, 1, 0), 
+            font_name='Roboto', 
+            bold=True,
+            halign='left',  # Align text to the left
+        )
+
+        # Price label, fixed width for proper alignment
+        self.price_label = Button(
+            text=f'€{self.price}', 
+            size_hint_x=0.2,  # Control width of the price label
+            background_color=(1, 1, 1, 0), 
+            font_name='Roboto', 
+            bold=True,
+            halign='right'  # Align price to the right
+        )
+
+        # Add name and price widgets to the details layout
         self.details.add_widget(self.name_label)
         self.details.add_widget(self.price_label)
         self.add_widget(self.details)
