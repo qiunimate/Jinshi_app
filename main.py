@@ -1,24 +1,27 @@
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
-from kivy.uix.image import AsyncImage, Image
+from kivy.uix.image import Image
 from kivy.core.text import LabelBase
 from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.label import Label
 from kivy.uix.widget import Widget
 from kivy.graphics import Color, Rectangle
+from kivy.utils import get_color_from_hex
 import os
-import pandas as pd
+import json  # Import json to load the menu data from JSON file
 
 LabelBase.register(name='Roboto', fn_regular='./font/msyh.ttc')
 
 MENU_PATH = "imgs/menu"
-PRICE_PATH = "price.csv"
+PRICE_PATH = "price.json"  # Path to the JSON file
 APP_IMG_PATH = "imgs/app_img"
 bg_img_name = "background.jpg"  # Background image path
 cover_img_name = "cover.png"  # App icon image
 
-price_df = pd.read_csv(PRICE_PATH)
+# Load the menu data from the JSON file
+with open(PRICE_PATH, 'r') as file:
+    menu_data = json.load(file)
 
 # Class to store selected dishes and manage total price
 class OrderManager:
@@ -44,22 +47,17 @@ class OrderManager:
     def get_selected_items(self):
         return self.selected_items
 
-# Define a custom button for each menu item
+# Define a custom button for each menu item (without image)
 class MenuItemButton(BoxLayout):
-    def __init__(self, name, price, image_path, order_manager, update_callback, **kwargs):
+    def __init__(self, name, price, order_manager, update_callback, **kwargs):
         super().__init__(orientation='horizontal', **kwargs)
         self.name = name
         self.price = price
-        self.image_path = image_path
         self.order_manager = order_manager
         self.update_callback = update_callback
 
-        # Display the image of the dish
-        self.image = AsyncImage(source=self.image_path, size_hint_x=0.3)
-        self.add_widget(self.image)
-
         # Details (name, price, quantity controls)
-        self.details = BoxLayout(orientation='vertical', size_hint_x=0.5)
+        self.details = BoxLayout(orientation='vertical')
         self.name_label = Button(text=self.name, size_hint_y=0.5, background_color=(1, 1, 1, 0), font_name='Roboto', bold=True)
         self.price_label = Button(text=f'€{self.price}', size_hint_y=0.5, background_color=(1, 1, 1, 0), font_name='Roboto', bold=True)
         self.details.add_widget(self.name_label)
@@ -67,7 +65,7 @@ class MenuItemButton(BoxLayout):
         self.add_widget(self.details)
 
         # Quantity buttons (add and remove)
-        self.quantity_controls = BoxLayout(orientation='horizontal', size_hint_x=0.2)
+        self.quantity_controls = BoxLayout(orientation='horizontal')
         self.add_btn = Button(text='+', on_press=self.add_to_order)
         self.remove_btn = Button(text='-', on_press=self.remove_from_order)
         self.quantity_controls.add_widget(self.add_btn)
@@ -104,12 +102,43 @@ class MenuScreen(RelativeLayout):
         main_layout = BoxLayout(orientation='horizontal')
 
         # Left side: Menu items list
-        menu_layout = BoxLayout(orientation='vertical', size_hint_x=0.7)
+        menu_layout = BoxLayout(orientation='vertical', size_hint_x=0.8)
 
-        for name, price in zip(price_df['name'], price_df['price']):
-            image_path = os.path.join(MENU_PATH, f"{name.lower().replace(' ', '_')}.jpg")
-            item_button = MenuItemButton(name, price, image_path, self.order_manager, self.update_selected_items)
-            menu_layout.add_widget(item_button)
+
+        # Iterate through categories and dishes
+        for category, dishes in menu_data.items():
+            # Wrapper layout to apply padding
+            category_box = BoxLayout(
+                orientation='vertical',
+                padding=[20, 0, 0, 0],  # Add 20px padding to the left side
+                size_hint_y=None,
+                height=40
+            )
+            
+            # Add category name with bold text and a bright color
+            category_label = Label(
+                text=category,
+                font_name='Roboto',
+                valign='middle',  # Align text vertically in the middle
+                halign='left',  # Align text horizontally to the left
+                color=get_color_from_hex('#FFDD57'),  # Bright yellow color
+                size_hint_x=1,  # Make the label take full width of its container
+                text_size=(None, None)  # Allow the label to dynamically adjust text size
+            )
+            
+            # Ensure that halign works by setting text_size to the label's width
+            category_label.bind(size=lambda instance, value: setattr(instance, 'text_size', (instance.width, None)))
+            
+            category_box.add_widget(category_label)
+            menu_layout.add_widget(category_box)
+
+
+            # Add each dish under the category
+            for dish in dishes:
+                name = dish['name']
+                price = dish['price']
+                item_button = MenuItemButton(name, price, self.order_manager, self.update_selected_items)
+                menu_layout.add_widget(item_button)
 
         # Right side: Selected items and total price
         self.selected_items_layout = BoxLayout(orientation='vertical', size_hint_x=0.3)
